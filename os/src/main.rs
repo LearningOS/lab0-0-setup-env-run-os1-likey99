@@ -1,9 +1,16 @@
 #![no_std]
 #![no_main]
-mod lang_items;
+
 
 #[macro_use]
 mod console;
+mod lang_items;
+mod sbi;
+
+use crate::sbi::shutdown;
+
+core::arch::global_asm!(include_str!("entry.asm"));
+
 const SYSCALL_EXIT: usize = 93;
 const SYSCALL_WRITE:usize = 64;
 
@@ -29,12 +36,24 @@ pub fn sys_write(fd:usize, buffer: &[u8])->isize{
     syscall(SYSCALL_WRITE, [fd,buffer.as_ptr() as usize,buffer.len()]) //id:64  args:[1,x,x]
 }
 
+fn clear_bss() {
+    extern "C" {
+        fn sbss();
+        fn ebss();
+    }
+    (sbss as usize..ebss as usize).for_each(|a| 
+        unsafe { (a as *mut u8).write_volatile(0) });
+}
+
+
 #[no_mangle]
-extern "C" fn _start() {
+extern "C" fn rust_main() {
     //loop{};
-    print!("hello,");
-    println!("world!");
-    sys_exit(9);
+    //print!("hello,");
+    //println!("world!");
+    //sys_exit(9);
+    clear_bss();
+    shutdown();
 }
 /*
 fn main() {
